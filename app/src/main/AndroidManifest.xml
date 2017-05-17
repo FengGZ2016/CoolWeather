@@ -20,6 +20,12 @@
         </activity>
         <activity android:name=".ui.WeatherActivity">
         </activity>
+
+        <service
+            android:name=".service.AutoUpdateServlice"
+            android:enabled="true"
+            android:exported="true">
+        </service>
     </application>
 
 </manifest>
