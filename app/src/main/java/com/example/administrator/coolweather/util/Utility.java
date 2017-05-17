@@ -13,6 +13,9 @@ import org.json.JSONObject;
 /**
  * Created by Administrator on 2017/5/7.
  * 用于解析和处理服务器返回的数据
+ * 用法：1，先使用JSONArray和JSONObject将数据解析出来
+ *       2，组装成实体类
+ *       3，调用save方法存储到数据库
  */
 
 public class Utility {
