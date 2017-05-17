@@ -5,11 +5,14 @@ import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.support.v4.view.GravityCompat;
+import android.support.v4.widget.DrawerLayout;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -63,6 +66,10 @@ public class WeatherActivity extends AppCompatActivity {
     ImageView mBingPicImg;
     @BindView(R.id.swipe_refresh)
     SwipeRefreshLayout mSwipeRefresh;
+    @BindView(R.id.nav_button)
+    Button mNavButton;
+    @BindView(R.id.drawer_layout)
+    DrawerLayout mDrawerLayout;
     private String mWeatherId;
 
     @Override
@@ -86,6 +93,14 @@ public class WeatherActivity extends AppCompatActivity {
                 requestWeather(mWeatherId);
             }
         });
+        //给菜单按钮设置点击事件
+        mNavButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                //打开滑动菜单
+                mDrawerLayout.openDrawer(GravityCompat.START);
+            }
+        });
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
         String bingPic = preferences.getString("bing_pic", null);
         if (bingPic != null) {
@@ -97,7 +112,7 @@ public class WeatherActivity extends AppCompatActivity {
         if (weatherString != null) {
             //有缓存时直接解析天气数据
             Weather weather = Utility.handleWeatherResponse(weatherString);
-            mWeatherId=weather.basic.weatherId;
+            mWeatherId = weather.basic.weatherId;
             //处理实体类的天气数据
             showWeatherInfo(weather);
         } else {
@@ -139,7 +154,7 @@ public class WeatherActivity extends AppCompatActivity {
     /**
      * 根据天气id到服务器请求天气信息
      */
-    private void requestWeather(final String weatherId) {
+    public void requestWeather(final String weatherId) {
         String weatherUrl = "http://guolin.tech/api/weather?cityid=" + weatherId + "&key=6189b9c6f9d84cec9625c86e52a1ad5f";
         Log.d("weatherUrl", "weatherUrl等于" + weatherUrl);
         HttpUtil.sendOkHttpRequest(weatherUrl, new Callback() {

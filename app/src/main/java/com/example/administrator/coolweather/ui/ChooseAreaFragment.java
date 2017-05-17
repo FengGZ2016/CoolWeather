@@ -5,7 +5,6 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,6 +15,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.administrator.coolweather.MainActivity;
 import com.example.administrator.coolweather.R;
 import com.example.administrator.coolweather.db.City;
 import com.example.administrator.coolweather.db.County;
@@ -108,25 +108,20 @@ public class ChooseAreaFragment extends Fragment{
                     queryCounties();
                 }else if (currentLevel == LEVEL_COUNTY) {
                     //级别为县时
-                            String weatherId = countyList.get(position).getWeatherId();
-                    Log.d("weatherId","等于："+weatherId+"------------");
-                    Intent intent=new Intent();
-                    intent.setClass(getActivity(),WeatherActivity.class);
-                    intent.putExtra("weather_id",weatherId);
-                    startActivity(intent);
-                    getActivity().finish();
-//                    if (getActivity() instanceof MainActivity) {
-//                        //如果getActivity()的上下文是MainActivity的上下文
-//                        Intent intent = new Intent(getActivity(), WeatherActivity.class);
-//                        intent.putExtra("weather_id", weatherId);
-//                        startActivity(intent);
-//                        getActivity().finish();
-//                    } else if (getActivity() instanceof WeatherActivity) {
-//                        WeatherActivity activity = (WeatherActivity) getActivity();
-//                        activity.drawerLayout.closeDrawers();
-//                        activity.swipeRefresh.setRefreshing(true);
-//                        activity.requestWeather(weatherId);
-//                    }
+                    String weatherId = countyList.get(position).getWeatherId();
+                    if (getActivity() instanceof MainActivity) {
+                        //如果碎片是MainActivity上
+                        Intent intent = new Intent(getActivity(), WeatherActivity.class);
+                        intent.putExtra("weather_id", weatherId);
+                        startActivity(intent);
+                        getActivity().finish();
+                    } else if (getActivity() instanceof WeatherActivity) {
+                        //如果碎片是WeatherActivity上，手动切换城市时
+                        WeatherActivity activity = (WeatherActivity) getActivity();
+                        activity.mDrawerLayout.closeDrawers();
+                        activity.mSwipeRefresh.setRefreshing(true);
+                        activity.requestWeather(weatherId);
+                    }
                 }
 
             }
