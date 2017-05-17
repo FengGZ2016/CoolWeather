@@ -1,18 +1,23 @@
 package com.example.administrator.coolweather.ui;
 
 import android.content.SharedPreferences;
+import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.bumptech.glide.Glide;
 import com.example.administrator.coolweather.R;
 import com.example.administrator.coolweather.gson.Forecast;
 import com.example.administrator.coolweather.gson.Weather;
@@ -54,65 +59,124 @@ public class WeatherActivity extends AppCompatActivity {
     ScrollView mWeatherLayout;
     @BindView(R.id.activity_weather)
     FrameLayout mActivityWeather;
+    @BindView(R.id.bing_pic_img)
+    ImageView mBingPicImg;
+    @BindView(R.id.swipe_refresh)
+    SwipeRefreshLayout mSwipeRefresh;
+    private String mWeatherId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_weather);
+        if (Build.VERSION.SDK_INT >= 21) {
+            //安卓5.0以上，去掉状态栏
+            View decorView = getWindow().getDecorView();
+            decorView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                    | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
+            getWindow().setStatusBarColor(Color.TRANSPARENT);
+        }
         ButterKnife.bind(this);
-        SharedPreferences preferences= PreferenceManager.getDefaultSharedPreferences(this);
-        String weatherString=preferences.getString("weather",null);
-        if (weatherString!=null){
+        //设置下拉刷新的进度条颜色
+        mSwipeRefresh.setColorSchemeResources(R.color.colorPrimary);
+        //设置下拉刷新的监听事件
+        mSwipeRefresh.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                requestWeather(mWeatherId);
+            }
+        });
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
+        String bingPic = preferences.getString("bing_pic", null);
+        if (bingPic != null) {
+            Glide.with(this).load(bingPic).into(mBingPicImg);
+        } else {
+            loadBingPic();
+        }
+        String weatherString = preferences.getString("weather", null);
+        if (weatherString != null) {
             //有缓存时直接解析天气数据
-            Weather weather= Utility.handleWeatherResponse(weatherString);
+            Weather weather = Utility.handleWeatherResponse(weatherString);
+            mWeatherId=weather.basic.weatherId;
             //处理实体类的天气数据
             showWeatherInfo(weather);
-        }else {
+        } else {
             //如果没有缓存就去服务器查询天气
-            String weatherId=getIntent().getStringExtra("weather_id");
+            mWeatherId = getIntent().getStringExtra("weather_id");
             mWeatherLayout.setVisibility(View.INVISIBLE);
-            requestWeather(weatherId);
+            requestWeather(mWeatherId);
         }
 
     }
 
     /**
-     * 根据天气id到服务器请求天气信息
-     * */
-    private void requestWeather(final String weatherId) {
-        String weatherUrl = "http://guolin.tech/api/weather?cityid=" + weatherId + "&key=6189b9c6f9d84cec9625c86e52a1ad5f";
-        Log.d("weatherUrl","weatherUrl等于"+weatherUrl);
-        HttpUtil.sendOkHttpRequest(weatherUrl, new Callback() {
+     * 加载必应每日一图
+     */
+    private void loadBingPic() {
+        String requestBingPic = "http://guolin.tech/api/bing_pic";
+        HttpUtil.sendOkHttpRequest(requestBingPic, new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
-                Toast.makeText(WeatherActivity.this, "小欧无法获取json天气信息！", Toast.LENGTH_SHORT).show();
+                e.printStackTrace();
             }
 
             @Override
             public void onResponse(Call call, Response response) throws IOException {
-                final String responseText=response.body().string();
+                final String bingPic = response.body().string();
+                SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(WeatherActivity.this).edit();
+                editor.putString("bing_pic", bingPic);
+                editor.apply();
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Glide.with(WeatherActivity.this).load(bingPic).into(mBingPicImg);
+                    }
+                });
+            }
+        });
+    }
+
+    /**
+     * 根据天气id到服务器请求天气信息
+     */
+    private void requestWeather(final String weatherId) {
+        String weatherUrl = "http://guolin.tech/api/weather?cityid=" + weatherId + "&key=6189b9c6f9d84cec9625c86e52a1ad5f";
+        Log.d("weatherUrl", "weatherUrl等于" + weatherUrl);
+        HttpUtil.sendOkHttpRequest(weatherUrl, new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                Toast.makeText(WeatherActivity.this, "小欧无法获取json天气信息！", Toast.LENGTH_SHORT).show();
+                //刷新结束，隐藏进度条
+                mSwipeRefresh.setRefreshing(false);
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                final String responseText = response.body().string();
                 //解析json数据
-                final Weather weather=Utility.handleWeatherResponse(responseText);
-                if (weather==null){
-                    Log.d("weather","weather是空的！！！！！");
+                final Weather weather = Utility.handleWeatherResponse(responseText);
+                if (weather == null) {
+                    Log.d("weather", "weather是空的！！！！！");
                 }
-                if (!"ok".equals(weather.status)){
-                    Log.d("weather.status","不等于ok!!!!!!!");
+                if (!"ok".equals(weather.status)) {
+                    Log.d("weather.status", "不等于ok!!!!!!!");
                 }
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        if (weather!=null&&"ok".equals(weather.status)){
+                        if (weather != null && "ok".equals(weather.status)) {
                             //解析成功
                             SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(WeatherActivity.this).edit();
-                            editor.putString("weather",responseText);
+                            editor.putString("weather", responseText);
                             editor.apply();
                             //显示天气信息
                             showWeatherInfo(weather);
-                        }else {
+                        } else {
                             //解析失败
                             Toast.makeText(WeatherActivity.this, "小欧无法解析json天气信息！", Toast.LENGTH_SHORT).show();
                         }
+                        //刷新结束，隐藏进度条
+                        mSwipeRefresh.setRefreshing(false);
                     }
                 });
 
@@ -122,11 +186,12 @@ public class WeatherActivity extends AppCompatActivity {
 
 
     /**
-     *   //处理实体类的天气数据,显示天气数据
+     * //处理实体类的天气数据,显示天气数据
      *
-     * @param weather*/
+     * @param weather
+     */
     private void showWeatherInfo(Weather weather) {
-        String cityName=weather.basic.cityName;
+        String cityName = weather.basic.cityName;
         String updateTime = weather.basic.update.updateTime.split(" ")[1];
         String degree = weather.now.temperature + "℃";
         String weatherInfo = weather.now.more.info;
@@ -149,7 +214,7 @@ public class WeatherActivity extends AppCompatActivity {
             mForecastLayout.addView(view);
         }
 
-        if (weather.aqi!=null){
+        if (weather.aqi != null) {
             mAqiText.setText(weather.aqi.city.api);
             mPm25Text.setText(weather.aqi.city.pm25);
         }
