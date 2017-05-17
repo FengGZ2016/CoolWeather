@@ -1,9 +1,11 @@
 package com.example.administrator.coolweather.ui;
 
 import android.app.ProgressDialog;
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -106,7 +108,13 @@ public class ChooseAreaFragment extends Fragment{
                     queryCounties();
                 }else if (currentLevel == LEVEL_COUNTY) {
                     //级别为县时
-//                    String weatherId = countyList.get(position).getWeatherId();
+                            String weatherId = countyList.get(position).getWeatherId();
+                    Log.d("weatherId","等于："+weatherId+"------------");
+                    Intent intent=new Intent();
+                    intent.setClass(getActivity(),WeatherActivity.class);
+                    intent.putExtra("weather_id",weatherId);
+                    startActivity(intent);
+                    getActivity().finish();
 //                    if (getActivity() instanceof MainActivity) {
 //                        //如果getActivity()的上下文是MainActivity的上下文
 //                        Intent intent = new Intent(getActivity(), WeatherActivity.class);
@@ -258,9 +266,8 @@ public class ChooseAreaFragment extends Fragment{
             //从服务器中查询
             int provinceCode = selectedProvince.getProvinceCode();
             int cityCode = selectedCity.getCityCode();
-            String test="http://guolin.tech/api/china/16/116";
             String address = "http://guolin.tech/api/china/" + provinceCode + "/" + cityCode;
-            queryFromServer(test, "county");
+            queryFromServer(address, "county");
         }
 
     }
